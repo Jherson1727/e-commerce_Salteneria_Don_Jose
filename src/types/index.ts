@@ -20,6 +20,11 @@ export interface Product {
   image: string;
   spicyLevel: SpicyLevel; // 0 = Sin picante, 1 = Medio/Tradicional, 2 = Picante, 3 = Extra Picante
   isBestSeller: boolean;
+  /** Datos que vienen de Dolibarr (ERP) */
+  dolibarrId?: number; // rowid del producto en Dolibarr
+  stock?: number; // unidades disponibles en el almacén de venta (ALM-POS)
+  priceHT?: number; // precio sin impuesto (se envía en la factura)
+  tvaTx?: number; // tasa de impuesto (%)
 }
 
 /**
@@ -41,6 +46,8 @@ export interface Order {
   total: number; // Monto total en BOB
   date: string; // Formato ISO o legible (ej. YYYY-MM-DD HH:mm)
   status: OrderStatus;
+  facturaRef?: string; // N° de factura generada en Dolibarr
+  cobroRegistrado?: boolean; // el pago quedó registrado en Dolibarr
 }
 
 /**

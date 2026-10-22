@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Flame, Star, Plus, Minus, Check, Info, ShoppingBag } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import type { Product } from '../types';
 import { useCart } from '../context/CartContext';
 
@@ -16,6 +17,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   // Formato oficial de precio en Bolivianos
   const formattedPrice = `Bs ${product.price.toFixed(2)}`;
 
+  // Stock real del almacén de venta (ALM-POS) que viene de Dolibarr
+  const stock = product.stock ?? 50;
+  const maxQuantity = Math.min(stock, 50);
+  const agotado = stock <= 0;
+
   // Consejos didácticos de consumo tradicional
   const traditionalTip =
     product.category === 'salteñas'
@@ -23,7 +29,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       : 'Servir bien frío para acompañar y refrescar el paladar tras saborear el calor de la salteña.';
 
   const handleIncrement = () => {
-    setLocalQuantity((prev) => Math.min(prev + 1, 50));
+    setLocalQuantity((prev) => Math.min(prev + 1, maxQuantity));
   };
 
   const handleDecrement = () => {
@@ -31,7 +37,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   };
 
   const handleAddToCart = () => {
-    addToCart(product, localQuantity);
+    if (agotado) return;
+    addToCart(product, Math.min(localQuantity, maxQuantity));
     setIsAdded(true);
     setTimeout(() => {
       setIsAdded(false);
@@ -81,13 +88,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       <div>
         {/* Contenedor de Imagen con Superposiciones */}
         <div className="relative h-60 w-full overflow-hidden bg-donjose-cream/40">
-          <img
-            src={product.image}
-            alt={product.name}
-            loading="lazy"
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-donjose-brown/60 via-transparent to-black/10 opacity-70 group-hover:opacity-60 transition-opacity" />
+          <Link to={`/producto/${product.id}`} aria-label={`Ver detalles de ${product.name}`} className="block w-full h-full">
+            <img
+              src={product.image}
+              alt={product.name}
+              loading="lazy"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+            />
+          </Link>
+          <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-donjose-brown/60 via-transparent to-black/10 opacity-70 group-hover:opacity-60 transition-opacity" />
 
           {/* Código ERP del producto */}
           <span className="absolute top-3 left-3 bg-white/95 backdrop-blur-md text-donjose-brown font-mono font-bold text-[11px] px-2.5 py-1 rounded-lg shadow-sm border border-donjose-cream">
@@ -113,7 +122,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           {/* Título y Precio */}
           <div className="flex items-start justify-between gap-3 mb-2">
             <h3 className="font-heading font-extrabold text-xl text-donjose-brown group-hover:text-donjose-orange transition-colors">
-              {product.name}
+              <Link to={`/producto/${product.id}`} className="hover:underline">
+                {product.name}
+              </Link>
             </h3>
             <span className="font-heading font-black text-xl text-donjose-orange shrink-0">
               {formattedPrice}
@@ -121,9 +132,27 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </div>
 
           {/* Descripción con ingrediente y tradición */}
-          <p className="text-xs sm:text-sm text-donjose-brown/80 leading-relaxed line-clamp-3 mb-4 font-normal">
+          <p className="text-xs sm:text-sm text-donjose-brown/80 leading-relaxed line-clamp-3 mb-3 font-normal">
             {product.description}
           </p>
+
+          <Link
+            to={`/producto/${product.id}`}
+            className="inline-block text-xs font-bold text-donjose-orange hover:underline mb-2"
+          >
+            Ver detalles →
+          </Link>
+
+          {/* Disponibilidad en tiempo real (Dolibarr · ALM-POS) */}
+          {product.stock !== undefined && (
+            <p
+              className={`text-[11px] font-bold mb-4 ${
+                agotado ? 'text-red-600' : stock <= 10 ? 'text-amber-700' : 'text-emerald-700'
+              }`}
+            >
+              {agotado ? 'Agotado por hoy' : `Disponibles: ${stock} unidades`}
+            </p>
+          )}
 
           {/* Alerta / Badge didáctico de Consumo Tradicional */}
           <div className="relative mb-4">
@@ -180,7 +209,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             <button
               type="button"
               onClick={handleIncrement}
-              disabled={localQuantity >= 50}
+              disabled={agotado || localQuantity >= maxQuantity}
               aria-label="Aumentar cantidad"
               className="w-7 h-7 rounded-xl flex items-center justify-center text-donjose-brown hover:bg-donjose-cream/60 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
@@ -192,7 +221,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <button
             type="button"
             onClick={handleAddToCart}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-heading font-bold text-xs sm:text-sm shadow-md transition-all duration-300 active:scale-95 select-none ${
+            disabled={agotado}
+            className={`flex-1 disabled:bg-gray-300 disabled:text-gray-500 disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-heading font-bold text-xs sm:text-sm shadow-md transition-all duration-300 active:scale-95 select-none ${
               isAdded
                 ? 'bg-emerald-600 text-white scale-[1.02] shadow-emerald-600/30 ring-2 ring-emerald-400'
                 : 'bg-donjose-orange hover:bg-donjose-orange/90 text-white shadow-donjose-orange/25 hover:shadow-lg'
@@ -206,7 +236,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             ) : (
               <>
                 <ShoppingBag className="w-4 h-4" />
-                <span>Añadir al Pedido</span>
+                <span>{agotado ? 'Agotado' : 'Añadir al Pedido'}</span>
               </>
             )}
           </button>

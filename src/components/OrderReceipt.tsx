@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import confetti from 'canvas-confetti';
 import { Printer, CheckCircle2, Flame } from 'lucide-react';
 import type { Order } from '../types';
@@ -45,26 +46,9 @@ export const OrderReceipt: React.FC<OrderReceiptProps> = ({ order, onClose }) =>
     window.print();
   };
 
-  return (
-    <div className="w-full max-w-lg mx-auto animate-fadeIn">
-      {/* Banner de Confirmación Exitosa */}
-      <div className="text-center mb-6 no-print">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mb-3 shadow-md animate-bounce">
-          <CheckCircle2 className="w-9 h-9 stroke-[2.5]" />
-        </div>
-        <h3 className="font-heading font-black text-2xl text-donjose-brown">
-          ¡Pago Confirmado con Éxito!
-        </h3>
-        <p className="text-xs sm:text-sm text-donjose-brown/80 mt-1">
-          Tu transacción Simple QR ha sido verificada y tu pedido ingresó a la tanda de cocina.
-        </p>
-      </div>
-
-      {/* Recibo / Ticket Térmico Digital */}
-      <div
-        id="printable-receipt"
-        className="bg-white p-6 sm:p-8 rounded-3xl border-2 border-dashed border-donjose-cream shadow-xl font-mono text-xs text-donjose-brown relative overflow-hidden"
-      >
+  // Contenido del ticket (se usa en pantalla y en la versión para imprimir)
+  const ticket = (
+    <>
         {/* Marca de agua decorativa */}
         <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none select-none">
           <Flame className="w-96 h-96 text-donjose-brown" />
@@ -99,6 +83,20 @@ export const OrderReceipt: React.FC<OrderReceiptProps> = ({ order, onClose }) =>
               {order.id}
             </span>
           </div>
+          {order.facturaRef && (
+            <div className="flex justify-between">
+              <span className="text-donjose-brown/70">FACTURA (DOLIBARR):</span>
+              <span className="font-bold">{order.facturaRef}</span>
+            </div>
+          )}
+          {order.facturaRef && (
+            <div className="flex justify-between">
+              <span className="text-donjose-brown/70">COBRO EN DOLIBARR:</span>
+              <span className={`font-bold ${order.cobroRegistrado ? 'text-emerald-700' : 'text-amber-700'}`}>
+                {order.cobroRegistrado ? 'REGISTRADO' : 'PENDIENTE'}
+              </span>
+            </div>
+          )}
           <div className="flex justify-between">
             <span className="text-donjose-brown/70">FECHA Y HORA:</span>
             <span>{order.date}</span>
@@ -189,7 +187,39 @@ export const OrderReceipt: React.FC<OrderReceiptProps> = ({ order, onClose }) =>
             Conserva este comprobante para recoger tu pedido en mostrador.
           </p>
         </div>
+    </>
+  );
+
+  return (
+    <div className="w-full max-w-lg mx-auto animate-fadeIn">
+      {/* Banner de Confirmación Exitosa */}
+      <div className="text-center mb-6 no-print">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mb-3 shadow-md animate-bounce">
+          <CheckCircle2 className="w-9 h-9 stroke-[2.5]" />
+        </div>
+        <h3 className="font-heading font-black text-2xl text-donjose-brown">
+          ¡Pago Confirmado con Éxito!
+        </h3>
+        <p className="text-xs sm:text-sm text-donjose-brown/80 mt-1">
+          Tu transacción Simple QR ha sido verificada y tu pedido ingresó a la tanda de cocina.
+        </p>
       </div>
+
+      {/* Recibo / Ticket Térmico Digital */}
+      <div className="bg-white p-6 sm:p-8 rounded-3xl border-2 border-dashed border-donjose-cream shadow-xl font-mono text-xs text-donjose-brown relative overflow-hidden">
+        {ticket}
+      </div>
+
+      {/* Copia del recibo solo para imprimir: se monta directo en <body> para que
+          la impresión no dependa del modal (antes salía cortado en 11 hojas). */}
+      {createPortal(
+        <div id="print-root">
+          <div className="bg-white p-6 border-2 border-dashed border-donjose-brown font-mono text-xs text-donjose-brown relative">
+            {ticket}
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Botones de Acción */}
       <div className="flex flex-col sm:flex-row items-center gap-3 mt-6 no-print">

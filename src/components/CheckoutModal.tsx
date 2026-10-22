@@ -18,6 +18,8 @@ import {
 import { useCart } from '../context/CartContext';
 import { OrderReceipt } from './OrderReceipt';
 import type { Order } from '../types';
+import { VentasService } from '../services/ventasService';
+import { getErrorMessage } from '../services/dolibarrClient';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -48,12 +50,27 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [timeLeft, setTimeLeft] = useState(QR_EXPIRE_SECONDS);
   const [isProcessing, setIsProcessing] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
+  const [paymentError, setPaymentError] = useState('');
 
   // Generar correlativo ORD-2026-XXXX al abrir o regenerar
   const generateNewOrderId = () => {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     return `ORD-2026-${randomSuffix}`;
   };
+
+  // Si el modal se cierra estando en el recibo (Escape, etc.), se reinicia
+  // para que la próxima compra empiece de cero y no muestre el recibo anterior.
+  useEffect(() => {
+    if (!isOpen && step === 3) {
+      setStep(1);
+      setCustomerName('');
+      setPhone('');
+      setNit('');
+      setOrderId('');
+      setCompletedOrder(null);
+      setPaymentError('');
+    }
+  }, [isOpen, step]);
 
   // Manejo de accesibilidad: tecla Escape y bloqueo de scroll
   useEffect(() => {
@@ -119,13 +136,21 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     setStep(2);
   };
 
-  // Simulación de procesamiento bancario (2 segundos con spinner)
-  const handleSimulatePayment = () => {
+  // Pago (simulado) + registro REAL de la venta en Dolibarr:
+  // crea la factura a nombre de "Cliente Web" y la valida en ALM-POS (descuenta stock).
+  const handleSimulatePayment = async () => {
     if (timeLeft <= 0 || isProcessing) return;
 
     setIsProcessing(true);
+    setPaymentError('');
 
-    setTimeout(() => {
+    try {
+      const venta = await VentasService.registrarVenta(
+        cart,
+        { nombre: customerName.trim(), celular: phone.trim(), nit: nit.trim() || '0' },
+        orderId
+      );
+
       const now = new Date();
       const formattedDate = `${now.toLocaleDateString('es-BO', {
         day: '2-digit',
@@ -146,15 +171,23 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         total: totalPrice,
         date: formattedDate,
         status: 'pagado',
+        facturaRef: venta.facturaRef,
+        cobroRegistrado: venta.pagoRegistrado,
       };
 
       setCompletedOrder(finalOrder);
-      setIsProcessing(false);
+      // La venta ya está registrada: se vacía el carrito de inmediato
+      // (el recibo usa su propia copia de los productos en finalOrder).
+      clearCart();
       setStep(3); // Avanzar a Recibo Final
       if (onOrderCompleted) {
         onOrderCompleted(finalOrder);
       }
-    }, 2000);
+    } catch (error) {
+      setPaymentError(getErrorMessage(error));
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // Regenerar QR cuando expira
@@ -172,6 +205,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     setNit('');
     setOrderId('');
     setCompletedOrder(null);
+    setPaymentError('');
     onClose();
   };
 
@@ -492,17 +526,25 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   {isProcessing ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Verificando transacción en red ASOBAN (2s)...</span>
+                      <span>Registrando la venta en Dolibarr...</span>
                     </>
                   ) : (
                     <>
                       <CheckCircle className="w-5 h-5" />
-                      <span>Simular Pago Realizado desde App Móvil</span>
+                      <span>Simular pago y registrar venta</span>
                     </>
                   )}
                 </button>
+                {paymentError && (
+                  <div className="mt-3 flex items-start gap-2 bg-red-50 border border-red-200 text-red-800 text-xs text-left rounded-xl p-3">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>
+                      <strong>No se pudo registrar la venta.</strong> {paymentError}
+                    </span>
+                  </div>
+                )}
                 <p className="text-[11px] text-donjose-brown/60 mt-2">
-                  * Botón de prueba para simular la confirmación bancaria en tiempo real.
+                  * El pago QR es simulado; la venta sí se registra en Dolibarr y descuenta el stock.
                 </p>
               </div>
             </div>

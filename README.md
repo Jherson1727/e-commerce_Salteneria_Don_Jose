@@ -1,32 +1,33 @@
-# React + TypeScript + Vite
+# E-commerce Salteñería Don José
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Tienda en línea (React + TypeScript + Vite + Tailwind) conectada a **Dolibarr ERP** por su API REST.
 
-Currently, two official plugins are available:
+- El catálogo muestra **precio y stock reales** del almacén de venta **ALM-POS**.
+- Al pagar (pago QR simulado), la venta **se registra en Dolibarr**: se crea una factura a nombre de
+  nombre del **cliente real** (se busca por celular/NIT o se crea), se valida en **ALM-POS**
+  (**descuenta el stock**) y se registra el **cobro** en la cuenta **BANCO-QR** (factura "Pagada").
+- Rutas (react-router): `/` inicio y catálogo · `/producto/:ref` detalle del producto (ej. `/producto/SAL-01`)
+  · `/admin` panel de administración de productos (en construcción, SDJ-39).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Requisitos
+1. Dolibarr corriendo (repo `erp-salteneria-don-jose`, `docker compose up -d` → `http://localhost:8080`).
+2. En Dolibarr: módulo **API REST** activo, tercero **Cliente Web** (respaldo), cuenta bancaria **BANCO-QR**
+   y usuario **ecommerce** con su **Clave para API**.
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+## Cómo correrlo
+```bash
+npm install
+cp .env.example .env.local   # en Windows: copy .env.example .env.local
+# Edita .env.local y pega la API key del usuario ecommerce en VITE_DOLIBARR_API_KEY
+npm run dev                  # abre http://localhost:5173
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Estructura de la conexión con Dolibarr
+| Archivo | Qué hace |
+| --- | --- |
+| `src/services/dolibarrClient.ts` | Cliente Axios con la cabecera `DOLAPIKEY` (tienda y admin) |
+| `src/services/productosService.ts` | `GET /products` (en venta, con stock) y `GET /warehouses` (ALM-POS) |
+| `src/services/ventasService.ts` | Cliente (`/thirdparties`), factura (`POST /invoices` + `/validate`, descuenta stock) y cobro (`POST /invoices/{id}/payments`) |
+| `src/hooks/useProductos.ts` | Estado de carga / error / recarga del catálogo |
+
+> La API key va en `.env.local`, que **no se sube a GitHub** (`*.local` está en `.gitignore`).

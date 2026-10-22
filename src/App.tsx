@@ -1,11 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CartProvider } from './context/CartContext';
 import { Navbar } from './components/Navbar';
 import { AboutSection } from './components/AboutSection';
 import { ProductCard } from './components/ProductCard';
 import { CartDrawer } from './components/CartDrawer';
 import { CheckoutModal } from './components/CheckoutModal';
-import { PRODUCTS, COMPANY_INFO } from './data/products';
+import { COMPANY_INFO } from './data/products';
+import { useProductos } from './hooks/useProductos';
+import { Routes, Route, useLocation } from 'react-router-dom';
+import { ProductDetail } from './pages/ProductDetail';
+import { NotFound } from './pages/NotFound';
 import type { ProductCategory } from './types';
 import {
   Flame,
@@ -18,6 +22,9 @@ import {
   MessageCircle,
   ShieldCheck,
   Filter,
+  Loader2,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 import './App.css';
 
@@ -28,20 +35,29 @@ function SaltenasStore() {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<'todas' | ProductCategory>('todas');
 
-  const filteredProducts = PRODUCTS.filter((product) => {
+  // Catálogo en tiempo real desde Dolibarr (precio y stock del ERP)
+  const { productos, loading, error, recargar } = useProductos();
+
+  // Al volver desde el detalle (ej. /#menu), baja hasta esa sección
+  const location = useLocation();
+  useEffect(() => {
+    if (location.pathname === '/' && location.hash) {
+      const seccion = document.getElementById(location.hash.slice(1));
+      seccion?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [location.pathname, location.hash]);
+
+  const filteredProducts = productos.filter((product) => {
     if (selectedCategory === 'todas') return true;
     return product.category === selectedCategory;
   });
 
-  const countSaltenas = PRODUCTS.filter((p) => p.category === 'salteñas').length;
-  const countBebidas = PRODUCTS.filter((p) => p.category === 'bebidas').length;
+  const countSaltenas = productos.filter((p) => p.category === 'salteñas').length;
+  const countBebidas = productos.filter((p) => p.category === 'bebidas').length;
 
-  return (
-    <div className="min-h-screen flex flex-col bg-[#FDFBF7] text-donjose-brown font-sans selection:bg-donjose-orange selection:text-white">
-      {/* 1. Barra de Navegación con Badge Reactivo Conectado al CartContext */}
-      <Navbar onOpenCart={() => setIsCartOpen(true)} />
-
-      <main className="flex-1">
+  // Contenido de la página de inicio (hero, historia, catálogo, contacto)
+  const homeContent = (
+    <>
         {/* 2. Hero Banner Principal */}
         <section id="inicio" className="relative overflow-hidden pt-8 pb-16 lg:py-24 bg-gradient-to-b from-white via-donjose-cream/20 to-transparent">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -67,14 +83,14 @@ function SaltenasStore() {
                 {/* Botones de Acción */}
                 <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
                   <a
-                    href="#menu"
+                    href="/#menu"
                     className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-donjose-orange hover:bg-donjose-orange/90 text-white font-heading font-bold text-base px-8 py-4 rounded-2xl shadow-lg shadow-donjose-orange/30 hover:scale-[1.02] active:scale-[0.98] transition-all"
                   >
                     Ver Catálogo Oficial
                     <ArrowRight className="w-5 h-5" />
                   </a>
                   <a
-                    href="#historia"
+                    href="/#historia"
                     className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white hover:bg-donjose-cream/40 text-donjose-brown font-heading font-semibold text-base px-7 py-4 rounded-2xl border border-donjose-cream shadow-sm hover:border-donjose-orange/50 transition-all"
                   >
                     Conoce Nuestra Misión
@@ -242,7 +258,7 @@ function SaltenasStore() {
                       : 'text-donjose-brown/80 hover:text-donjose-brown hover:bg-donjose-cream/30'
                   }`}
                 >
-                  Todas ({PRODUCTS.length})
+                  Todas ({productos.length})
                 </button>
                 <button
                   type="button"
@@ -270,11 +286,38 @@ function SaltenasStore() {
             </div>
 
             {/* Grilla de Productos con ProductCard didácticos */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
+            {/* Estado de conexión con Dolibarr */}
+            {error && (
+              <div className="mb-8 flex flex-col sm:flex-row sm:items-center gap-3 justify-between bg-red-50 border border-red-200 text-red-800 rounded-2xl p-4">
+                <div className="flex items-start gap-2 text-sm">
+                  <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                  <span>
+                    <strong>No se pudo cargar el catálogo desde Dolibarr.</strong> {error}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={recargar}
+                  className="inline-flex items-center gap-1.5 bg-red-600 text-white text-xs font-bold py-2 px-4 rounded-xl hover:bg-red-500 transition-colors self-start sm:self-auto"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Reintentar
+                </button>
+              </div>
+            )}
+
+            {loading && productos.length === 0 ? (
+              <div className="flex items-center justify-center gap-2 py-16 text-donjose-brown/70">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm font-semibold">Cargando productos desde Dolibarr...</span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {filteredProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
@@ -385,6 +428,25 @@ function SaltenasStore() {
             </div>
           </div>
         </section>
+    </>
+  );
+
+  return (
+    <div className="min-h-screen flex flex-col bg-[#FDFBF7] text-donjose-brown font-sans selection:bg-donjose-orange selection:text-white">
+      {/* 1. Barra de Navegación con Badge Reactivo Conectado al CartContext */}
+      <Navbar onOpenCart={() => setIsCartOpen(true)} />
+
+      <main className="flex-1">
+        <Routes>
+          <Route path="/" element={homeContent} />
+          <Route
+            path="/producto/:ref"
+            element={
+              <ProductDetail productos={productos} loading={loading} error={error} onRetry={recargar} />
+            }
+          />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </main>
 
       {/* 7. Footer Institucional */}
@@ -419,10 +481,10 @@ function SaltenasStore() {
                 Navegación
               </h4>
               <ul className="space-y-1.5 text-xs text-donjose-cream/80">
-                <li><a href="#inicio" className="hover:text-donjose-orange transition-colors">Inicio</a></li>
-                <li><a href="#menu" className="hover:text-donjose-orange transition-colors">Menú Oficial</a></li>
-                <li><a href="#historia" className="hover:text-donjose-orange transition-colors">Misión y Visión</a></li>
-                <li><a href="#contacto" className="hover:text-donjose-orange transition-colors">Sucursal y Contacto</a></li>
+                <li><a href="/#inicio" className="hover:text-donjose-orange transition-colors">Inicio</a></li>
+                <li><a href="/#menu" className="hover:text-donjose-orange transition-colors">Menú Oficial</a></li>
+                <li><a href="/#historia" className="hover:text-donjose-orange transition-colors">Misión y Visión</a></li>
+                <li><a href="/#contacto" className="hover:text-donjose-orange transition-colors">Sucursal y Contacto</a></li>
               </ul>
             </div>
 
@@ -462,6 +524,7 @@ function SaltenasStore() {
       <CheckoutModal
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
+        onOrderCompleted={recargar}
       />
     </div>
   );

@@ -30,26 +30,29 @@
 }
 
 /* Estilos de impresión para el recibo térmico digital */
+/* Impresión del recibo: solo se imprime la copia montada en #print-root */
+#print-root {
+  display: none;
+}
+
 @media print {
-  body * {
-    visibility: hidden;
+  @page {
+    margin: 10mm;
   }
-  #printable-receipt,
-  #printable-receipt * {
-    visibility: visible;
+  body > *:not(#print-root) {
+    display: none !important;
   }
-  #printable-receipt {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    margin: 0;
-    padding: 24px;
-    box-shadow: none !important;
-    border: 1px dashed #6B2D24 !important;
-    background: white !important;
+  #print-root {
+    display: block !important;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+  #print-root * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   .no-print {
     display: none !important;
   }
 }
+

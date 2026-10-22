@@ -24,10 +24,10 @@ export const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart }) => {
   }, []);
 
   const navLinks = [
-    { label: 'Inicio', href: '#inicio' },
-    { label: 'Menú Oficial', href: '#menu' },
-    { label: 'Tradición y Misión', href: '#historia' },
-    { label: 'Sucursal y Horarios', href: '#contacto' },
+    { label: 'Inicio', href: '/#inicio' },
+    { label: 'Menú Oficial', href: '/#menu' },
+    { label: 'Tradición y Misión', href: '/#historia' },
+    { label: 'Sucursal y Horarios', href: '/#contacto' },
   ];
 
   return (
@@ -69,7 +69,7 @@ export const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart }) => {
           <div className="flex items-center justify-between">
             {/* Logotipo e Identidad */}
             <a
-              href="#inicio"
+              href="/#inicio"
               className="group flex items-center gap-3 transition-transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-donjose-orange/50 rounded-lg p-1"
             >
               <div className="w-11 h-11 rounded-full overflow-hidden bg-white shadow-md shadow-donjose-orange/20 border border-donjose-cream flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
