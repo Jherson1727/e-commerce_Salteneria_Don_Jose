@@ -43,7 +43,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
   const [nit, setNit] = useState('');
-  const [errors, setErrors] = useState<{ customerName?: string; phone?: string }>({});
+  const [errors, setErrors] = useState<{ customerName?: string; phone?: string; nit?: string }>({});
 
   // Estados de la pasarela QR
   const [orderId, setOrderId] = useState('');
@@ -114,13 +114,24 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   // Validación y pase a Paso 2
   const handleProceedToQR = (e: React.FormEvent) => {
     e.preventDefault();
-    const newErrors: { customerName?: string; phone?: string } = {};
+    const newErrors: { customerName?: string; phone?: string; nit?: string } = {};
+    const nombre = customerName.trim();
+    const celular = phone.trim();
+    const nitCi = nit.trim();
 
-    if (!customerName.trim()) {
+    // RF-04 y RF-05 (SRS): obligatorios y formato
+    if (!nombre) {
       newErrors.customerName = 'Por favor ingresa tu nombre completo.';
+    } else if (!/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?: [A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*$/.test(nombre)) {
+      newErrors.customerName = 'El nombre solo puede tener letras y espacios.';
     }
-    if (!phone.trim()) {
+    if (!celular) {
       newErrors.phone = 'Ingresa un número de celular o WhatsApp de contacto.';
+    } else if (!/^[0-9]{8}$/.test(celular)) {
+      newErrors.phone = 'El celular debe tener 8 dígitos, solo números (ej. 71723456).';
+    }
+    if (nitCi && !/^[0-9]{1,15}$/.test(nitCi)) {
+      newErrors.nit = 'El NIT/C.I. solo puede tener números (o déjalo vacío).';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -365,6 +376,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   <Phone className="w-4 h-4 text-donjose-brown/50 absolute left-3.5 top-3.5" />
                   <input
                     type="tel"
+                    inputMode="numeric"
+                    maxLength={8}
                     placeholder="Ej. 71723456"
                     value={phone}
                     onChange={(e) => {
@@ -400,10 +413,24 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     type="text"
                     placeholder="Ej. 654321015"
                     value={nit}
-                    onChange={(e) => setNit(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-donjose-cream text-sm bg-white text-donjose-brown focus:outline-none focus:border-donjose-orange focus:ring-2 focus:ring-donjose-orange/20 transition-all"
+                    inputMode="numeric"
+                    onChange={(e) => {
+                      setNit(e.target.value);
+                      if (errors.nit) setErrors((prev) => ({ ...prev, nit: undefined }));
+                    }}
+                    className={`w-full pl-10 pr-4 py-3 rounded-2xl border text-sm bg-white text-donjose-brown focus:outline-none focus:ring-2 transition-all ${
+                      errors.nit
+                        ? 'border-red-500 focus:ring-red-300'
+                        : 'border-donjose-cream focus:border-donjose-orange focus:ring-donjose-orange/20'
+                    }`}
                   />
                 </div>
+                {errors.nit && (
+                  <p className="text-xs text-red-600 flex items-center gap-1 font-medium mt-1">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    {errors.nit}
+                  </p>
+                )}
               </div>
 
               <div className="pt-2">
