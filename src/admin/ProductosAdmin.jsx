@@ -59,7 +59,7 @@ export const ProductosAdmin = () => {
               <tr className="bg-gray-100 border-b text-sm">
                 <th className="p-4">Ref</th>
                 <th className="p-4">Nombre</th>
-                <th className="p-4">Precio (Bs)</th>
+                <th className="p-4">Precio (Bs, IVA incl.)</th>
                 <th className="p-4">Stock</th>
                 <th className="p-4 text-center">Acciones</th>
               </tr>
@@ -69,7 +69,7 @@ export const ProductosAdmin = () => {
                 <tr key={prod.id || prod.ref} className="hover:bg-gray-50">
                   <td className="p-4 font-mono font-bold">{prod.ref}</td>
                   <td className="p-4 font-medium">{prod.label}</td>
-                  <td className="p-4">{parseFloat(prod.price || 0).toFixed(2)} Bs</td>
+                  <td className="p-4">{parseFloat(prod.price_ttc || prod.price || 0).toFixed(2)} Bs</td>
                   <td className="p-4">{prod.stock_reel ?? 'N/D'} unidades</td>
                   <td className="p-4 text-center space-x-2">
                     <button

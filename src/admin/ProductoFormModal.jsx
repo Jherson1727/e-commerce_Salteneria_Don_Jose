@@ -5,6 +5,7 @@ export const ProductoFormModal = ({ isOpen, onClose, onSave, producto, loading }
     ref: '',
     label: '',
     price: '',
+    tva_tx: '13',
     status: '1',
     description: ''
   });
@@ -14,7 +15,9 @@ export const ProductoFormModal = ({ isOpen, onClose, onSave, producto, loading }
       setFormData({
         ref: producto.ref || '',
         label: producto.label || '',
-        price: producto.price || '',
+        // Precio final con IVA incluido (el que ve el cliente), con 2 decimales
+        price: producto.price_ttc ? parseFloat(producto.price_ttc).toFixed(2) : '',
+        tva_tx: producto.tva_tx !== undefined ? String(parseFloat(producto.tva_tx)) : '13',
         status: producto.status !== undefined ? String(producto.status) : '1',
         description: producto.description || ''
       });
@@ -23,6 +26,7 @@ export const ProductoFormModal = ({ isOpen, onClose, onSave, producto, loading }
         ref: '',
         label: '',
         price: '',
+        tva_tx: '13',
         status: '1',
         description: ''
       });
@@ -41,6 +45,7 @@ export const ProductoFormModal = ({ isOpen, onClose, onSave, producto, loading }
     onSave({
       ...formData,
       price: parseFloat(formData.price) || 0,
+      tva_tx: parseFloat(formData.tva_tx) || 0,
       status: parseInt(formData.status, 10)
     });
   };
@@ -86,17 +91,31 @@ export const ProductoFormModal = ({ isOpen, onClose, onSave, producto, loading }
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Precio (Bs)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Precio final (Bs, IVA incluido)</label>
             <input
               type="number"
-              step="0.5"
+              step="0.01"
+              min="0"
               name="price"
               required
               value={formData.price}
               onChange={handleChange}
               className="w-full border border-gray-300 rounded p-2 focus:ring-orange-500 focus:border-orange-500"
-              placeholder="Ej: 8.5"
+              placeholder="Ej: 8.00"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">IVA</label>
+            <select
+              name="tva_tx"
+              value={formData.tva_tx}
+              onChange={handleChange}
+              className="w-full border border-gray-300 rounded p-2 focus:ring-orange-500 focus:border-orange-500"
+            >
+              <option value="13">13 % (salteñas)</option>
+              <option value="0">0 % (bebidas)</option>
+            </select>
           </div>
 
           <div>

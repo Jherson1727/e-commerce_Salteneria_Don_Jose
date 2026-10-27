@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { productosAdminService } from './productosAdminService';
+import { getErrorMessage } from '../services/dolibarrClient';
 
 export const useProductosAdmin = () => {
   const [productos, setProductos] = useState([]);
@@ -16,7 +17,7 @@ export const useProductosAdmin = () => {
       const data = await productosAdminService.listarProductos();
       setProductos(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError('Error al cargar la lista de productos desde Dolibarr.');
+      setError(`No se pudo cargar la lista de productos: ${getErrorMessage(err)}`);
     } finally {
       setLoading(false);
     }
@@ -39,7 +40,7 @@ export const useProductosAdmin = () => {
       await cargarProductos();
       cerrarModal();
     } catch (err) {
-      setError('Error al guardar el producto. Verifica los datos o la API Key.');
+      setError(`No se pudo guardar el producto: ${getErrorMessage(err)}`);
     } finally {
       setLoading(false);
     }
@@ -56,7 +57,11 @@ export const useProductosAdmin = () => {
       await productosAdminService.eliminarProducto(id);
       await cargarProductos();
     } catch (err) {
-      setError('Error al eliminar el producto de Dolibarr.');
+      setError(
+        err?.response?.status === 409
+          ? `No se puede eliminar "${ref}" porque ya tiene ventas, compras o stock registrados en Dolibarr. Para quitarlo de la tienda, edítalo y márcalo como "Fuera de venta".`
+          : `No se pudo eliminar el producto: ${getErrorMessage(err)}`
+      );
     } finally {
       setLoading(false);
     }
